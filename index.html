@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>正規表現道場 regex-dojo</title>
+<style>
+  :root {
+    --bg: #f6f7fb; --panel: #fff; --text: #1f2430; --muted: #5d6475; --line: #d9dce6;
+    --accent: #3559e0; --accent-weak: #e7ecff; --ok: #1a8a4a; --ok-weak: #e3f6ea;
+    --ng: #c62f3b; --ng-weak: #fde8ea; --hl: #ffe27a; --hl2: #9fe0ff;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+    line-height: 1.6; overflow-x: hidden;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10; background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    max-width: 960px; margin: 0 auto; padding: 8px 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  }
+  h1 { font-size: 1.15rem; margin: 0; }
+  .score { font-weight: 700; color: var(--accent); background: var(--accent-weak); padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  nav { max-width: 960px; margin: 0 auto; display: flex; padding: 0 8px; }
+  nav button {
+    flex: 1; min-height: 48px; border: 0; background: none; font: inherit; font-weight: 600;
+    color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer;
+  }
+  nav button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  main { max-width: 960px; margin: 0 auto; padding: 12px; }
+  section.mode[hidden] { display: none; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  h3 { font-size: .95rem; margin: 12px 0 6px; }
+  label.lbl { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 4px; }
+  .regex-row { display: flex; align-items: stretch; border: 2px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+  .regex-row:focus-within { border-color: var(--accent); }
+  .regex-row .slash { font-family: var(--mono); color: var(--muted); padding: 0 6px; display: flex; align-items: center; font-size: 1.1rem; }
+  .regex-row input { flex: 1; min-width: 0; border: 0; outline: 0; font-family: var(--mono); font-size: 1.05rem; padding: 10px 2px; background: transparent; }
+  textarea, input[type="text"] { font-size: 16px; }
+  textarea {
+    width: 100%; min-height: 150px; resize: vertical; border: 2px solid var(--line); border-radius: 10px;
+    padding: 10px; font-family: var(--mono); line-height: 1.6; outline: 0;
+  }
+  textarea:focus { border-color: var(--accent); }
+  .flags { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  .flags label {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; font-size: .9rem;
+  }
+  .flags input { width: 20px; height: 20px; margin: 0; }
+  .flags code { font-weight: 700; }
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  button.btn {
+    min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line);
+    background: #fff; font: inherit; font-weight: 600; cursor: pointer; color: var(--text);
+  }
+  button.btn:hover { border-color: var(--accent); }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn:disabled { opacity: .45; cursor: default; }
+  .err { color: var(--ng); background: var(--ng-weak); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: .9rem; overflow-wrap: anywhere; }
+  .err[hidden] { display: none; }
+  .output {
+    font-family: var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+    background: #fbfbfd; border: 1px dashed var(--line); border-radius: 10px; padding: 10px; min-height: 3em;
+  }
+  mark { background: var(--hl); color: inherit; border-radius: 3px; box-shadow: 0 0 0 1px #d8b52a inset; }
+  mark.alt { background: var(--hl2); box-shadow: 0 0 0 1px #4fb6e0 inset; }
+  mark.empty { display: inline-block; width: 2px; height: 1.2em; vertical-align: text-bottom; background: var(--ng); box-shadow: none; }
+  .count { font-weight: 700; margin: 10px 0 6px; }
+  .matches { list-style: none; padding: 0; margin: 0; }
+  .matches li { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; background: #fff; font-size: .9rem; overflow-wrap: anywhere; }
+  .matches .idx { color: var(--muted); font-size: .8rem; }
+  .matches table { border-collapse: collapse; margin-top: 4px; width: 100%; }
+  .matches td { padding: 2px 6px 2px 0; vertical-align: top; overflow-wrap: anywhere; }
+  .matches td:first-child { color: var(--muted); white-space: nowrap; width: 1%; }
+  code, .str { font-family: var(--mono); }
+  .str { background: #eef0f6; border-radius: 4px; padding: 1px 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .undef { color: var(--muted); font-style: italic; }
+  .note { color: var(--muted); font-size: .85rem; }
+
+  /* ドリル */
+  .grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+  .grid button {
+    min-height: 44px; border-radius: 8px; border: 1px solid var(--line); background: #fff;
+    font: inherit; font-size: .8rem; font-weight: 600; cursor: pointer; padding: 0; color: var(--text);
+  }
+  .grid button.solved { background: var(--ok-weak); border-color: var(--ok); color: var(--ok); }
+  .grid button.current { outline: 3px solid var(--accent); outline-offset: 1px; }
+  .lvl-head { font-size: .8rem; color: var(--muted); margin: 8px 0 4px; }
+  .q-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  .tag { background: var(--accent-weak); color: var(--accent); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+  .tag.ok { background: var(--ok-weak); color: var(--ok); }
+  .instruction { font-size: 1.05rem; font-weight: 600; margin: 4px 0 10px; }
+  .cases { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cases h3 { margin-top: 0; }
+  .cases ul { list-style: none; padding: 0; margin: 0; }
+  .cases li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; background: #fff; min-height: 40px; }
+  .cases li .mark { width: 1.4em; text-align: center; font-weight: 700; flex: none; }
+  .cases li.pass { border-color: var(--ok); background: var(--ok-weak); }
+  .cases li.pass .mark { color: var(--ok); }
+  .cases li.fail { border-color: var(--ng); background: var(--ng-weak); }
+  .cases li.fail .mark { color: var(--ng); }
+  .cases li .why { margin-left: auto; font-size: .75rem; color: var(--ng); white-space: nowrap; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .result { margin-top: 10px; padding: 10px; border-radius: 10px; font-weight: 600; }
+  .result[hidden] { display: none; }
+  .result.ok { background: var(--ok-weak); color: var(--ok); }
+  .result.ng { background: var(--ng-weak); color: var(--ng); }
+  .hintbox { margin-top: 10px; padding: 10px; border-radius: 10px; background: #fff8e1; border: 1px solid #f0d77b; }
+  .hintbox[hidden] { display: none; }
+  .hintbox p { margin: 4px 0; }
+  .nav-q { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; }
+  .nav-q .btn { flex: 1; }
+
+  /* チートシート */
+  table.cheat { width: 100%; border-collapse: collapse; background: #fff; table-layout: fixed; }
+  table.cheat th, table.cheat td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+  table.cheat th { background: #f0f2f8; font-size: .85rem; }
+  table.cheat col.c1 { width: 24%; } table.cheat col.c2 { width: 40%; }
+  table.cheat td:first-child code { font-weight: 700; color: var(--accent); }
+
+  @media (max-width: 640px) {
+    main { padding: 8px; }
+    .card { padding: 12px; }
+    .grid { grid-template-columns: repeat(5, 1fr); }
+    .cases { grid-template-columns: 1fr; }
+    table.cheat, table.cheat tbody, table.cheat tr, table.cheat td { display: block; width: 100%; }
+    table.cheat colgroup, table.cheat thead { display: none; }
+    table.cheat tr { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; padding: 6px 4px; }
+    table.cheat td { border: 0; padding: 3px 8px; }
+    table.cheat td::before { content: attr(data-label) "："; color: var(--muted); font-size: .8rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>正規表現道場</h1>
+    <span class="score" id="score">正解数 0/30</span>
+  </div>
+  <nav role="tablist">
+    <button role="tab" data-mode="play" aria-selected="true">練習場</button>
+    <button role="tab" data-mode="drill" aria-selected="false">ドリル</button>
+    <button role="tab" data-mode="cheat" aria-selected="false">チートシート</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 練習場 -->
+  <section class="mode" id="mode-play">
+    <div class="card">
+      <label class="lbl" for="pg-pattern">正規表現</label>
+      <div class="regex-row">
+        <span class="slash">/</span>
+        <input id="pg-pattern" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="\d{3}-\d{4}">
+        <span class="slash" id="pg-flagview">/g</span>
+      </div>
+      <div class="flags">
+        <label><input type="checkbox" id="flag-g" checked> <code>g</code> すべて</label>
+        <label><input type="checkbox" id="flag-i"> <code>i</code> 大文字小文字を無視</label>
+        <label><input type="checkbox" id="flag-m"> <code>m</code> 複数行（^ $ を各行に）</label>
+      </div>
+      <div class="err" id="pg-error" hidden></div>
+    </div>
+
+    <div class="card">
+      <label class="lbl" for="pg-text">テスト文字列</label>
+      <div class="presets" id="pg-presets"></div>
+      <textarea id="pg-text" spellcheck="false"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>結果</h2>
+      <div class="output" id="pg-output" aria-live="polite"></div>
+      <div class="count" id="pg-count"></div>
+      <ul class="matches" id="pg-matches"></ul>
+    </div>
+  </section>
+
+  <!-- ドリル -->
+  <section class="mode" id="mode-drill" hidden>
+    <div class="card">
+      <h2>問題一覧</h2>
+      <div id="dr-grid"></div>
+    </div>
+    <div class="card" id="dr-card">
+      <div class="q-meta">
+        <span class="tag" id="dr-level"></span>
+        <span id="dr-no"></span>
+        <span id="dr-attempts"></span>
+        <span class="tag ok" id="dr-solved" hidden>正解済み</span>
+      </div>
+      <h2 id="dr-title"></h2>
+      <p class="instruction" id="dr-instruction"></p>
+      <label class="lbl" for="dr-input">あなたの正規表現（フラグなしで判定）</label>
+      <div class="regex-row">
+        <span class="slash">/</span>
+        <input id="dr-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ここに入力">
+        <span class="slash">/</span>
+      </div>
+      <div class="err" id="dr-error" hidden></div>
+      <div class="actions">
+        <button class="btn primary" id="dr-check">判定する</button>
+        <button class="btn" id="dr-hint">ヒント</button>
+      </div>
+      <div class="result" id="dr-result" hidden></div>
+      <div class="hintbox" id="dr-hintbox" hidden></div>
+      <div class="cases" style="margin-top:12px">
+        <div>
+          <h3>マッチさせたい</h3>
+          <ul id="dr-pos"></ul>
+        </div>
+        <div>
+          <h3>マッチさせてはいけない</h3>
+          <ul id="dr-neg"></ul>
+        </div>
+      </div>
+      <div class="nav-q">
+        <button class="btn" id="dr-prev">← 前の問題</button>
+        <button class="btn" id="dr-next">次の問題 →</button>
+      </div>
+    </div>
+    <p class="note">判定は JavaScript の RegExp（フラグなし）の test() で行います。課題文に「全体が」とある問題は文字列全体が一致する必要があります。進捗はこのブラウザに保存されます。
+      <button class="btn" id="dr-reset" style="margin-top:6px">進捗をリセット</button></p>
+  </section>
+
+  <!-- チートシート -->
+  <section class="mode" id="mode-cheat" hidden>
+    <div id="cheat"></div>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+// ===== ドリル問題データ（docs/SPEC.md の30問をそのまま使用） =====
+/*PROBLEMS:BEGIN*/
+const PROBLEMS = [
+  {
+    "id": "B1",
+    "level": "基礎",
+    "title": "リテラル",
+    "instruction": "『猫』という文字を含む文字列にマッチさせてください",
+    "pos": [
+      "猫が好き",
+      "野良猫です",
+      "猫"
+    ],
+    "neg": [
+      "犬が好き",
+      "ねこ",
+      "ネコ"
+    ],
+    "answer": "猫",
+    "explanation": "文字はそのまま書けば、その文字にマッチします"
+  },
+  {
+    "id": "B2",
+    "level": "基礎",
+    "title": "数字",
+    "instruction": "数字が1文字以上続く部分にマッチさせてください",
+    "pos": [
+      "abc123",
+      "注文番号9876",
+      "a1"
+    ],
+    "neg": [
+      "abc",
+      "あいうえお",
+      "---"
+    ],
+    "answer": "\\d+",
+    "explanation": "\\d は数字1文字、+ は直前の要素の1回以上の繰り返しです"
+  },
+  {
+    "id": "B3",
+    "level": "基礎",
+    "title": "行頭",
+    "instruction": "行の先頭が『第』で始まる文字列にマッチさせてください",
+    "pos": [
+      "第3章 テキスト",
+      "第1回"
+    ],
+    "neg": [
+      "次は第2章",
+      "あ第"
+    ],
+    "answer": "^第",
+    "explanation": "^ は行の先頭を表します"
+  },
+  {
+    "id": "B4",
+    "level": "基礎",
+    "title": "行末",
+    "instruction": "『円』で終わる文字列にマッチさせてください",
+    "pos": [
+      "合計は500円",
+      "100円"
+    ],
+    "neg": [
+      "円安ドル高",
+      "500ドル"
+    ],
+    "answer": "円$",
+    "explanation": "$ は行の末尾を表します"
+  },
+  {
+    "id": "B5",
+    "level": "基礎",
+    "title": "ドット",
+    "instruction": "a と c の間に任意の1文字が入る部分（a○c）にマッチさせてください",
+    "pos": [
+      "abc",
+      "aXc",
+      "a5c"
+    ],
+    "neg": [
+      "ac",
+      "abbc",
+      "xyz"
+    ],
+    "answer": "a.c",
+    "explanation": ". は改行以外の任意の1文字です"
+  },
+  {
+    "id": "B6",
+    "level": "基礎",
+    "title": "文字クラス",
+    "instruction": "a、b、c のどれか1文字にマッチさせてください",
+    "pos": [
+      "cat",
+      "cab",
+      "box"
+    ],
+    "neg": [
+      "ABC",
+      "xyz",
+      "あいう"
+    ],
+    "answer": "[abc]",
+    "explanation": "[ ] の中に文字を並べると、その中のどれか1文字にマッチします"
+  },
+  {
+    "id": "B7",
+    "level": "基礎",
+    "title": "回数指定",
+    "instruction": "数字がちょうど3文字続く部分にマッチさせてください",
+    "pos": [
+      "a123b",
+      "123",
+      "x999y"
+    ],
+    "neg": [
+      "12",
+      "a1b2",
+      "なし"
+    ],
+    "answer": "\\d{3}",
+    "explanation": "{3} は直前の要素がちょうど3回という意味です"
+  },
+  {
+    "id": "B8",
+    "level": "基礎",
+    "title": "プラス",
+    "instruction": "g の後に o が1回以上続く部分にマッチさせてください",
+    "pos": [
+      "go",
+      "goo",
+      "gooo"
+    ],
+    "neg": [
+      "g",
+      "ga",
+      "ooo"
+    ],
+    "answer": "go+",
+    "explanation": "+ は1回以上。0回でもよい場合は * を使います"
+  },
+  {
+    "id": "B9",
+    "level": "基礎",
+    "title": "疑問符",
+    "instruction": "color と colour の両方にマッチさせてください",
+    "pos": [
+      "color",
+      "colour"
+    ],
+    "neg": [
+      "colr",
+      "colouur"
+    ],
+    "answer": "colou?r",
+    "explanation": "? は直前の要素が0回か1回（あってもなくてもよい）という意味です"
+  },
+  {
+    "id": "B10",
+    "level": "基礎",
+    "title": "単語文字",
+    "instruction": "英数字とアンダースコアの並びにマッチさせてください",
+    "pos": [
+      "user_01",
+      "abc"
+    ],
+    "neg": [
+      "あいうえお",
+      "！！！"
+    ],
+    "answer": "\\w+",
+    "explanation": "\\w は英数字とアンダースコア。日本語の文字は含まれません"
+  },
+  {
+    "id": "M1",
+    "level": "中級",
+    "title": "選択",
+    "instruction": "『犬』または『猫』を含む文字列にマッチさせてください",
+    "pos": [
+      "犬が好き",
+      "猫が好き",
+      "犬も猫も"
+    ],
+    "neg": [
+      "鳥が好き",
+      "うさぎ"
+    ],
+    "answer": "犬|猫",
+    "explanation": "| は『または』です"
+  },
+  {
+    "id": "M2",
+    "level": "中級",
+    "title": "郵便番号",
+    "instruction": "郵便番号の形式（数字3桁-数字4桁）にマッチさせてください",
+    "pos": [
+      "123-4567",
+      "〒100-0001"
+    ],
+    "neg": [
+      "12-34567",
+      "1234-567",
+      "1234567"
+    ],
+    "answer": "\\d{3}-\\d{4}",
+    "explanation": "ハイフンはそのまま書けます。桁数は { } で指定します"
+  },
+  {
+    "id": "M3",
+    "level": "中級",
+    "title": "日付形式",
+    "instruction": "YYYY/MM/DD の形式（4桁/2桁/2桁）にマッチさせてください",
+    "pos": [
+      "2026/11/08",
+      "1999/01/31"
+    ],
+    "neg": [
+      "2026-11-08",
+      "26/11/08",
+      "2026/1/8"
+    ],
+    "answer": "\\d{4}/\\d{2}/\\d{2}",
+    "explanation": "/ は正規表現ではそのまま書けます"
+  },
+  {
+    "id": "M4",
+    "level": "中級",
+    "title": "拡張子",
+    "instruction": ".png か .jpg で終わる文字列にマッチさせてください",
+    "pos": [
+      "photo.png",
+      "a.jpg",
+      "x.y.png"
+    ],
+    "neg": [
+      "photo.gif",
+      "a.png.bak",
+      "photo.PNG"
+    ],
+    "answer": "\\.(png|jpg)$",
+    "explanation": ". は『任意の1文字』という特別な意味があるので、文字としてのドットは \\. と書きます。(png|jpg) はグループ化した選択です"
+  },
+  {
+    "id": "M5",
+    "level": "中級",
+    "title": "否定クラス",
+    "instruction": "数字以外で始まる文字列にマッチさせてください",
+    "pos": [
+      "a123",
+      "あ1"
+    ],
+    "neg": [
+      "1abc",
+      "9"
+    ],
+    "answer": "^\\D",
+    "explanation": "\\D は数字以外の1文字。大文字にすると否定の意味になります（\\d↔\\D、\\w↔\\W、\\s↔\\S）。[^0-9] でも同じです"
+  },
+  {
+    "id": "M6",
+    "level": "中級",
+    "title": "単語境界",
+    "instruction": "独立した単語としての cat にマッチさせてください",
+    "pos": [
+      "my cat is",
+      "cat!"
+    ],
+    "neg": [
+      "catalog",
+      "scat"
+    ],
+    "answer": "\\bcat\\b",
+    "explanation": "\\b は単語の境界（単語文字とそれ以外の境目）です"
+  },
+  {
+    "id": "M7",
+    "level": "中級",
+    "title": "グループの繰り返し",
+    "instruction": "文字列全体が ab の繰り返しだけでできているものにマッチさせてください",
+    "pos": [
+      "ab",
+      "abab",
+      "ababab"
+    ],
+    "neg": [
+      "aba",
+      "aabb",
+      "ba"
+    ],
+    "answer": "^(ab)+$",
+    "explanation": "( ) でグループ化すると、+ などの量指定子をまとめて適用できます"
+  },
+  {
+    "id": "M8",
+    "level": "中級",
+    "title": "メール簡易",
+    "instruction": "メールアドレスらしい形式（○○@○○.○○）にマッチさせてください",
+    "pos": [
+      "tanaka@example.co.jp",
+      "a.b@c-d.com"
+    ],
+    "neg": [
+      "@example.com",
+      "tanaka@example",
+      "tanaka@@x.com"
+    ],
+    "answer": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+    "explanation": "[^\\s@] は『空白と @ 以外の文字』。[^ ] は否定の文字クラスです"
+  },
+  {
+    "id": "M9",
+    "level": "中級",
+    "title": "時刻形式",
+    "instruction": "HH:MM の形式（2桁:2桁）にマッチさせてください",
+    "pos": [
+      "09:30",
+      "23:59"
+    ],
+    "neg": [
+      "9:30",
+      "12-30",
+      "ab:cd"
+    ],
+    "answer": "\\d{2}:\\d{2}",
+    "explanation": ": はそのまま書けます"
+  },
+  {
+    "id": "M10",
+    "level": "中級",
+    "title": "カラーコード",
+    "instruction": "# の後に16進数6桁が続くカラーコードにマッチさせてください",
+    "pos": [
+      "#FF5733",
+      "#00ff00"
+    ],
+    "neg": [
+      "#FF573",
+      "#GGGGGG",
+      "FF5733"
+    ],
+    "answer": "#[0-9A-Fa-f]{6}",
+    "explanation": "文字クラスの中では範囲（0-9、A-F、a-f）を並べて書けます"
+  },
+  {
+    "id": "A1",
+    "level": "上級",
+    "title": "先読み",
+    "instruction": "直後に『円』が続く数字の並びにマッチさせてください",
+    "pos": [
+      "500円",
+      "あと100円です"
+    ],
+    "neg": [
+      "500ドル",
+      "円500"
+    ],
+    "answer": "\\d+(?=円)",
+    "explanation": "(?=…) は肯定先読み。『後に…が続く位置』まで含めて条件にできます（円そのものはマッチに含まれません）"
+  },
+  {
+    "id": "A2",
+    "level": "上級",
+    "title": "後読み",
+    "instruction": "¥ の直後にある金額（数字とカンマの並び）にマッチさせてください",
+    "pos": [
+      "¥1,000",
+      "価格は¥500"
+    ],
+    "neg": [
+      "1,000円",
+      "$500"
+    ],
+    "answer": "(?<=¥)[\\d,]+",
+    "explanation": "(?<=…) は肯定後読み。『前に…がある位置』を条件にできます"
+  },
+  {
+    "id": "A3",
+    "level": "上級",
+    "title": "後方参照",
+    "instruction": "同じ単語が空白をはさんで2回繰り返される部分にマッチさせてください",
+    "pos": [
+      "the the",
+      "go go"
+    ],
+    "neg": [
+      "the a",
+      "go went"
+    ],
+    "answer": "\\b(\\w+) \\1\\b",
+    "explanation": "\\1 は1番目のグループでマッチした文字列そのものを指します（後方参照）"
+  },
+  {
+    "id": "A4",
+    "level": "上級",
+    "title": "同じ数字3つ",
+    "instruction": "同じ数字が3つ続く部分にマッチさせてください",
+    "pos": [
+      "111",
+      "あ222い"
+    ],
+    "neg": [
+      "112",
+      "121",
+      "12"
+    ],
+    "answer": "(\\d)\\1\\1",
+    "explanation": "後方参照を使うと『同じ内容の繰り返し』を表せます"
+  },
+  {
+    "id": "A5",
+    "level": "上級",
+    "title": "パスワード条件",
+    "instruction": "文字列全体が、英字と数字の両方を含み、4文字以上であるものにマッチさせてください",
+    "pos": [
+      "abc1",
+      "a1b2c3"
+    ],
+    "neg": [
+      "abcd",
+      "1234",
+      "a1"
+    ],
+    "answer": "^(?=.*[A-Za-z])(?=.*\\d).{4,}$",
+    "explanation": "^ の直後に先読みを置くと『全体に対する条件』として使えます"
+  },
+  {
+    "id": "A6",
+    "level": "上級",
+    "title": "携帯番号",
+    "instruction": "文字列全体が 0 で始まる携帯電話番号の形式（0XX-XXXX-XXXX）にマッチさせてください",
+    "pos": [
+      "090-1234-5678",
+      "080-0000-1111"
+    ],
+    "neg": [
+      "09012345678",
+      "90-1234-5678",
+      "090-1234-567"
+    ],
+    "answer": "^0\\d{2}-\\d{4}-\\d{4}$",
+    "explanation": "全体一致は ^ と $ で囲みます"
+  },
+  {
+    "id": "A7",
+    "level": "上級",
+    "title": "月の検証",
+    "instruction": "YYYY/MM/DD の形式で、月が01〜12のものにマッチさせてください",
+    "pos": [
+      "2026/11/08",
+      "2026/01/31"
+    ],
+    "neg": [
+      "2026/13/01",
+      "2026/00/10"
+    ],
+    "answer": "\\d{4}/(0[1-9]|1[0-2])/\\d{2}",
+    "explanation": "月は 0[1-9]（01〜09）か 1[0-2]（10〜12）のどちらか、と選択で表せます"
+  },
+  {
+    "id": "A8",
+    "level": "上級",
+    "title": "引用部分",
+    "instruction": "ダブルクオートで囲まれた部分にマッチさせてください",
+    "pos": [
+      "彼は\"行く\"と言った",
+      "say \"hi\""
+    ],
+    "neg": [
+      "彼は行くと言った",
+      "'hi'"
+    ],
+    "answer": "\"[^\"]*\"",
+    "explanation": "\"[^\"]*\" は『\" の後に \" 以外が続き、\" で閉じる』という形です"
+  },
+  {
+    "id": "A9",
+    "level": "上級",
+    "title": "カンマ区切り",
+    "instruction": "文字列全体が3桁ごとのカンマ区切り数値であるものにマッチさせてください",
+    "pos": [
+      "1,000,000",
+      "999",
+      "12,345"
+    ],
+    "neg": [
+      "1,00",
+      "1000,000",
+      ",123"
+    ],
+    "answer": "^\\d{1,3}(,\\d{3})*$",
+    "explanation": "先頭は1〜3桁、その後に『,＋3桁』が0回以上続く、と分解します"
+  },
+  {
+    "id": "A10",
+    "level": "上級",
+    "title": "URL",
+    "instruction": "http:// または https:// で始まるURLにマッチさせてください",
+    "pos": [
+      "https://example.com/path",
+      "http://a.jp"
+    ],
+    "neg": [
+      "ftp://example.com",
+      "example.com",
+      "https://"
+    ],
+    "answer": "^https?://[^\\s/]+\\.[^\\s/]+",
+    "explanation": "s? で s はあってもなくてもよい、と表せます"
+  }
+];
+/*PROBLEMS:END*/
+
+// 考え方のヒント（ヒントボタンの1段階目）
+const HINTS = {
+  B1: '特別な記号は要りません。探したい文字そのものを書いてみましょう。',
+  B2: '「数字1文字」を表す記法と、「1回以上の繰り返し」を表す記号を組み合わせます。',
+  B3: '「行の先頭」という位置を表す記号があります。',
+  B4: '「行の末尾」という位置を表す記号を、文字の後ろに置きます。',
+  B5: '「任意の1文字」を表す記号を a と c の間に置きます。',
+  B6: '「この中のどれか1文字」を表す角かっこ [ ] を使います。',
+  B7: '数字1文字の記法に、回数をちょうど指定する { } を付けます。',
+  B8: '「直前の要素が1回以上」を表す記号を o の後ろに付けます。',
+  B9: 'u が「あってもなくてもよい」と書ければ1つの式で両方にマッチします。',
+  B10: '英数字とアンダースコアをまとめて表す記法（\\w）があります。',
+  M1: '「A または B」を表す記号を使います。',
+  M2: '数字の記法と回数指定 { } を使い、間にハイフンを置きます。',
+  M3: '桁数をそれぞれ { } で指定し、/ でつなぎます。',
+  M4: '文字としてのドットはエスケープが必要です。png と jpg の選択はグループにまとめ、末尾を指定します。',
+  M5: '先頭の位置と、「数字以外の1文字」を表す記法を組み合わせます。',
+  M6: '単語の境目を表す記法を cat の前後に置きます。',
+  M7: '( ) でまとめたものに + を付け、先頭と末尾を固定して全体一致にします。',
+  M8: '「空白でも @ でもない文字」の並びを否定の文字クラス [^ ] で作り、@ と \\. でつなぎます。',
+  M9: '2桁の数字、コロン、2桁の数字の順に並べます。',
+  M10: '16進数1文字は 0-9、A-F、a-f の範囲を1つの文字クラスに並べて表せます。',
+  A1: '「後ろに円が続く」という条件だけを付け、円そのものはマッチに含めない書き方があります。',
+  A2: '「前に ¥ がある」という条件を付ける書き方（後読み）を使います。金額は数字とカンマの文字クラスで。',
+  A3: '単語をグループで捕まえ、空白の後に「同じもの」を後方参照で書きます。単語の境界も忘れずに。',
+  A4: '数字1文字をグループで捕まえて、それを後方参照で2回繰り返します。',
+  A5: '^ の直後に先読みを2つ置き、「どこかに英字がある」「どこかに数字がある」を確認してから長さを指定します。',
+  A6: '0 の後に数字2桁、ハイフン、4桁、ハイフン、4桁。全体一致なので ^ と $ で囲みます。',
+  A7: '月の部分を「0 の後に 1〜9」か「1 の後に 0〜2」の選択で表します。',
+  A8: '" で始まり、" 以外の文字が0個以上続き、" で閉じる形を書きます。',
+  A9: '先頭は1〜3桁、その後に「カンマ＋3桁」のグループが0回以上。全体一致です。',
+  A10: 's を省略可能にし、:// の後に「空白でも / でもない文字」とドットを含むホスト名部分を書きます。',
+};
+
+// ===== 共通 =====
+const $ = (id) => document.getElementById(id);
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const STORE = 'regex:';
+function load(key, fallback) {
+  try { const v = localStorage.getItem(STORE + key); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(STORE + key, JSON.stringify(value)); } catch (e) { /* 保存できない環境では無視 */ }
+}
+
+// ===== タブ =====
+const tabs = document.querySelectorAll('nav button');
+function showMode(mode) {
+  tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.mode === mode)));
+  document.querySelectorAll('section.mode').forEach((s) => { s.hidden = s.id !== 'mode-' + mode; });
+  save('mode', mode);
+}
+tabs.forEach((b) => b.addEventListener('click', () => showMode(b.dataset.mode)));
+
+// ===== 練習場 =====
+const PRESETS = [
+  { name: '問い合わせ文', text: 'お問い合わせは support@example.co.jp まで。\n担当：田中（tanaka.taro@mail.example.com）\n電話：03-1234-5678 / 携帯：090-1111-2222\n〒100-0001 東京都千代田区1-1\n受付日：2026/11/08 09:30' },
+  { name: '日付・時刻', text: '開始 2026-11-08 10:00\n締切 2026/12/24 23:59\n予備日 2027/01/05\n誤記 2026/13/40 25:61\n和暦 令和8年11月8日' },
+  { name: '電話番号', text: '代表 03-1234-5678\n携帯 090-1234-5678\n携帯 080-0000-1111\nフリー 0120-123-456\n国際 +81-90-1234-5678\nハイフンなし 09012345678' },
+  { name: '英文・単語', text: 'The cat sat on the the mat.\nA catalog of Cats and scattered CATS.\nColor or colour? Go go go!' },
+  { name: '金額・ログ', text: '[INFO] 2026-11-08 user=alice price=¥1,200 (1200円)\n[WARN] 2026-11-08 user=bob price=$15.99\n[ERROR] 2026-11-09 user=carol code=E404 url=https://example.com/a?b=1' },
+];
+const pg = {
+  pattern: $('pg-pattern'), text: $('pg-text'), error: $('pg-error'), output: $('pg-output'),
+  count: $('pg-count'), list: $('pg-matches'), flagview: $('pg-flagview'),
+  g: $('flag-g'), i: $('flag-i'), m: $('flag-m'),
+};
+PRESETS.forEach((p, idx) => {
+  const b = document.createElement('button');
+  b.className = 'btn'; b.type = 'button'; b.textContent = p.name;
+  b.addEventListener('click', () => { pg.text.value = p.text; runPlayground(); });
+  $('pg-presets').appendChild(b);
+  if (idx === 0) pg.text.value = p.text;
+});
+
+const MAX_MATCHES = 1000;
+function collectMatches(re, text, global) {
+  const out = [];
+  if (!global) {
+    const m = re.exec(text);
+    if (m) out.push(m);
+    return out;
+  }
+  re.lastIndex = 0;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    out.push(m);
+    if (m[0] === '') {
+      // 空文字マッチで無限ループしないように1文字（サロゲートペアは2単位）進める
+      const cp = text.codePointAt(re.lastIndex);
+      re.lastIndex += (cp !== undefined && cp > 0xffff) ? 2 : 1;
+    }
+    if (out.length >= MAX_MATCHES) break;
+  }
+  return out;
+}
+
+function runPlayground() {
+  const flags = (pg.g.checked ? 'g' : '') + (pg.i.checked ? 'i' : '') + (pg.m.checked ? 'm' : '');
+  pg.flagview.textContent = '/' + flags;
+  const src = pg.pattern.value;
+  const text = pg.text.value;
+  pg.list.innerHTML = '';
+  if (src === '') {
+    pg.error.hidden = true;
+    pg.output.innerHTML = esc(text);
+    pg.count.textContent = '正規表現を入力してください';
+    return;
+  }
+  let re;
+  try {
+    re = new RegExp(src, flags);
+  } catch (e) {
+    pg.error.hidden = false;
+    pg.error.textContent = '正規表現のエラー：' + e.message;
+    pg.output.innerHTML = esc(text);
+    pg.count.textContent = '';
+    return;
+  }
+  pg.error.hidden = true;
+  const matches = collectMatches(re, text, pg.g.checked);
+
+  // ハイライト
+  let html = '', pos = 0;
+  matches.forEach((m, n) => {
+    const start = m.index, end = m.index + m[0].length;
+    if (start < pos) return;
+    html += esc(text.slice(pos, start));
+    if (m[0] === '') html += '<mark class="empty" title="空文字のマッチ"></mark>';
+    else html += '<mark' + (n % 2 ? ' class="alt"' : '') + '>' + esc(m[0]) + '</mark>';
+    pos = end;
+  });
+  html += esc(text.slice(pos));
+  pg.output.innerHTML = html || '<span class="note">（テスト文字列が空です）</span>';
+
+  pg.count.textContent = 'マッチ件数：' + matches.length + '件' +
+    (matches.length >= MAX_MATCHES ? '（上限 ' + MAX_MATCHES + ' 件で打ち切り）' : '') +
+    (!pg.g.checked && matches.length ? '（g なしのため最初の1件のみ）' : '');
+
+  const show = (v) => v === undefined ? '<span class="undef">undefined（不参加）</span>' : '<span class="str">' + esc(v) + '</span>';
+  matches.slice(0, 200).forEach((m, n) => {
+    const li = document.createElement('li');
+    let rows = '<tr><td>全体</td><td>' + show(m[0]) + '</td></tr>';
+    for (let k = 1; k < m.length; k++) rows += '<tr><td>グループ' + k + '</td><td>' + show(m[k]) + '</td></tr>';
+    if (m.groups) for (const name of Object.keys(m.groups)) rows += '<tr><td>&lt;' + esc(name) + '&gt;</td><td>' + show(m.groups[name]) + '</td></tr>';
+    li.innerHTML = '<div class="idx">#' + (n + 1) + '　位置 ' + m.index + '〜' + (m.index + m[0].length) + '</div><table>' + rows + '</table>';
+    pg.list.appendChild(li);
+  });
+  if (matches.length > 200) {
+    const li = document.createElement('li');
+    li.className = 'note'; li.textContent = '…ほか ' + (matches.length - 200) + ' 件（一覧は先頭200件まで表示）';
+    pg.list.appendChild(li);
+  }
+}
+['input', 'change'].forEach((ev) => {
+  [pg.pattern, pg.text, pg.g, pg.i, pg.m].forEach((el) => el.addEventListener(ev, runPlayground));
+});
+runPlayground();
+
+// ===== ドリル =====
+let solved = new Set(load('solved', []).filter((id) => PROBLEMS.some((p) => p.id === id)));
+let attempts = load('attempts', {});
+if (typeof attempts !== 'object' || attempts === null || Array.isArray(attempts)) attempts = {};
+let drafts = load('drafts', {});
+if (typeof drafts !== 'object' || drafts === null || Array.isArray(drafts)) drafts = {};
+let current = Math.min(Math.max(0, Number(load('current', 0)) || 0), PROBLEMS.length - 1);
+let hintStep = 0;
+
+const dr = {
+  grid: $('dr-grid'), level: $('dr-level'), no: $('dr-no'), att: $('dr-attempts'), solvedTag: $('dr-solved'),
+  title: $('dr-title'), instruction: $('dr-instruction'), input: $('dr-input'), error: $('dr-error'),
+  check: $('dr-check'), hint: $('dr-hint'), result: $('dr-result'), hintbox: $('dr-hintbox'),
+  pos: $('dr-pos'), neg: $('dr-neg'), prev: $('dr-prev'), next: $('dr-next'),
+};
+
+function updateScore() {
+  $('score').textContent = '正解数 ' + solved.size + '/' + PROBLEMS.length;
+}
+
+function renderGrid() {
+  dr.grid.innerHTML = '';
+  ['基礎', '中級', '上級'].forEach((lv) => {
+    const head = document.createElement('div');
+    head.className = 'lvl-head';
+    const items = PROBLEMS.map((p, i) => ({ p, i })).filter((x) => x.p.level === lv);
+    head.textContent = lv + '（' + items.filter((x) => solved.has(x.p.id)).length + '/' + items.length + '）';
+    dr.grid.appendChild(head);
+    const g = document.createElement('div');
+    g.className = 'grid';
+    items.forEach(({ p, i }) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = p.id;
+      b.title = p.title + (solved.has(p.id) ? '（正解済み）' : '');
+      if (solved.has(p.id)) b.classList.add('solved');
+      if (i === current) { b.classList.add('current'); b.setAttribute('aria-current', 'true'); }
+      b.addEventListener('click', () => goTo(i));
+      g.appendChild(b);
+    });
+    dr.grid.appendChild(g);
+  });
+}
+
+function caseItem(s) {
+  const li = document.createElement('li');
+  li.innerHTML = '<span class="mark">・</span><span class="str">' + esc(s) + '</span>';
+  return li;
+}
+
+function renderProblem() {
+  const p = PROBLEMS[current];
+  dr.level.textContent = p.level;
+  dr.no.textContent = (current + 1) + ' / ' + PROBLEMS.length + '　' + p.id;
+  dr.att.textContent = '挑戦 ' + (attempts[p.id] || 0) + '回';
+  dr.solvedTag.hidden = !solved.has(p.id);
+  dr.title.textContent = p.id + ' ' + p.title;
+  dr.instruction.textContent = p.instruction;
+  dr.input.value = drafts[p.id] || '';
+  dr.error.hidden = true;
+  dr.result.hidden = true;
+  dr.hintbox.hidden = true;
+  hintStep = 0;
+  dr.hint.textContent = 'ヒント';
+  dr.hint.disabled = false;
+  dr.pos.innerHTML = ''; dr.neg.innerHTML = '';
+  p.pos.forEach((s) => dr.pos.appendChild(caseItem(s)));
+  p.neg.forEach((s) => dr.neg.appendChild(caseItem(s)));
+  dr.prev.disabled = current === 0;
+  dr.next.disabled = current === PROBLEMS.length - 1;
+  dr.next.textContent = '次の問題 →';
+  dr.next.classList.remove('primary');
+  renderGrid();
+}
+
+function goTo(i) {
+  current = Math.min(Math.max(0, i), PROBLEMS.length - 1);
+  save('current', current);
+  renderProblem();
+  document.getElementById('dr-card').scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+// 判定（フラグなしの RegExp で test()）
+function judge(src, p) {
+  const re = new RegExp(src);
+  const pos = p.pos.map((s) => re.test(s));
+  const neg = p.neg.map((s) => re.test(s));
+  return { pos, neg, ok: pos.every(Boolean) && neg.every((v) => !v) };
+}
+
+function check() {
+  const p = PROBLEMS[current];
+  const src = dr.input.value;
+  dr.error.hidden = true;
+  if (src === '') {
+    dr.result.hidden = false;
+    dr.result.className = 'result ng';
+    dr.result.textContent = '正規表現を入力してください。';
+    return;
+  }
+  let r;
+  try {
+    r = judge(src, p);
+  } catch (e) {
+    dr.error.hidden = false;
+    dr.error.textContent = '正規表現のエラー：' + e.message;
+    dr.result.hidden = true;
+    return;
+  }
+  attempts[p.id] = (attempts[p.id] || 0) + 1;
+  save('attempts', attempts);
+  dr.att.textContent = '挑戦 ' + attempts[p.id] + '回';
+
+  const paint = (ul, results, wantMatch) => {
+    [...ul.children].forEach((li, k) => {
+      const pass = results[k] === wantMatch;
+      li.className = pass ? 'pass' : 'fail';
+      li.querySelector('.mark').textContent = pass ? '✓' : '✗';
+      const old = li.querySelector('.why'); if (old) old.remove();
+      if (!pass) {
+        const why = document.createElement('span');
+        why.className = 'why';
+        why.textContent = wantMatch ? 'マッチしない' : 'マッチしてしまう';
+        li.appendChild(why);
+      }
+    });
+  };
+  paint(dr.pos, r.pos, true);
+  paint(dr.neg, r.neg, false);
+
+  dr.result.hidden = false;
+  if (r.ok) {
+    solved.add(p.id);
+    save('solved', [...solved]);
+    updateScore();
+    dr.solvedTag.hidden = false;
+    dr.result.className = 'result ok';
+    dr.result.textContent = '正解！ すべての文字列で期待どおりに判定されました。';
+    if (current < PROBLEMS.length - 1) { dr.next.classList.add('primary'); dr.next.textContent = '次の問題へ進む →'; }
+    else dr.result.textContent += ' これが最後の問題です。';
+    renderGrid();
+  } else {
+    const fails = r.pos.filter((v) => !v).length + r.neg.filter((v) => v).length;
+    dr.result.className = 'result ng';
+    dr.result.textContent = '不正解：' + fails + '件の文字列で失敗しています（✗ の行を確認してください）。';
+  }
+}
+
+function hint() {
+  const p = PROBLEMS[current];
+  hintStep = Math.min(hintStep + 1, 2);
+  dr.hintbox.hidden = false;
+  let html = '<p><strong>考え方のヒント：</strong>' + esc(HINTS[p.id] || '') + '</p>';
+  if (hintStep >= 2) {
+    html += '<p><strong>模範解答：</strong><code class="str">' + esc(p.answer) + '</code></p>' +
+            '<p><strong>解説：</strong>' + esc(p.explanation) + '</p>';
+    dr.hint.textContent = '模範解答を表示中';
+    dr.hint.disabled = true;
+  } else {
+    dr.hint.textContent = '模範解答を見る';
+  }
+  dr.hintbox.innerHTML = html;
+}
+
+dr.check.addEventListener('click', check);
+dr.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); check(); } });
+dr.input.addEventListener('input', () => { drafts[PROBLEMS[current].id] = dr.input.value; save('drafts', drafts); });
+dr.hint.addEventListener('click', hint);
+dr.prev.addEventListener('click', () => goTo(current - 1));
+dr.next.addEventListener('click', () => goTo(current + 1));
+$('dr-reset').addEventListener('click', () => {
+  if (!confirm('ドリルの正解記録と挑戦回数をすべて消去します。よろしいですか？')) return;
+  solved = new Set(); attempts = {}; drafts = {};
+  save('solved', []); save('attempts', {}); save('drafts', {});
+  updateScore(); renderProblem();
+});
+
+updateScore();
+renderProblem();
+
+// ===== チートシート =====
+const CHEAT = [
+  ['文字クラス', [
+    ['.', '改行以外の任意の1文字', 'a.c → abc, a5c'],
+    ['[abc]', 'a・b・c のどれか1文字', '[abc] → cat の c'],
+    ['[^abc]', 'a・b・c 以外の1文字', '[^0-9] → 数字以外'],
+    ['[a-z]', '範囲指定（a〜z のどれか）', '[0-9A-F] → 16進数1文字'],
+    ['\\d / \\D', '数字1文字 / 数字以外', '\\d+ → 123'],
+    ['\\w / \\W', '英数字と _ / それ以外', '\\w+ → user_01'],
+    ['\\s / \\S', '空白文字（スペース・タブ・改行など）/ それ以外', 'a\\sb → a b'],
+  ]],
+  ['量指定子', [
+    ['*', '直前の要素を0回以上', 'go*  → g, go, goo'],
+    ['+', '直前の要素を1回以上', 'go+ → go, goo'],
+    ['?', '直前の要素を0回か1回', 'colou?r → color, colour'],
+    ['{n}', 'ちょうど n 回', '\\d{3} → 123'],
+    ['{n,}', 'n 回以上', '\\d{2,} → 12, 1234'],
+    ['{n,m}', 'n 回以上 m 回以下', '\\d{1,3} → 1, 12, 123'],
+    ['*? +? ??', '最短一致（できるだけ少なく）', '<.+?> → <b> だけ'],
+  ]],
+  ['アンカー（位置）', [
+    ['^', '先頭（m フラグありなら各行の先頭）', '^第 → 第3章'],
+    ['$', '末尾（m フラグありなら各行の末尾）', '円$ → 100円'],
+    ['\\b', '単語の境界', '\\bcat\\b → my cat is'],
+    ['\\B', '単語の境界以外', '\\Bcat → scat の cat'],
+  ]],
+  ['グループ・選択', [
+    ['a|b', 'a または b', '犬|猫 → 犬, 猫'],
+    ['(…)', 'グループ化＋キャプチャ', '(ab)+ → abab'],
+    ['(?:…)', 'キャプチャしないグループ', '(?:ab)+ → abab'],
+    ['(?<name>…)', '名前付きキャプチャ', '(?<y>\\d{4}) → y=2026'],
+    ['\\1', '後方参照（1番目のグループと同じ文字列）', '(\\d)\\1 → 11, 22'],
+    ['\\k<name>', '名前付きグループの後方参照', '(?<c>.)\\k<c> → aa'],
+  ]],
+  ['先読み・後読み', [
+    ['(?=…)', '肯定先読み：後に…が続く位置', '\\d+(?=円) → 500円 の 500'],
+    ['(?!…)', '否定先読み：後に…が続かない位置', '\\d+(?!\\d|円) → 500ドル の 500'],
+    ['(?<=…)', '肯定後読み：前に…がある位置', '(?<=¥)\\d+ → ¥500 の 500'],
+    ['(?<!…)', '否定後読み：前に…がない位置', '(?<!¥)\\b\\d+ → 500円 の 500'],
+  ]],
+  ['エスケープ・特殊文字', [
+    ['\\.', '文字としてのドット', '\\.png → .png'],
+    ['\\\\', '文字としてのバックスラッシュ', 'C:\\\\ → C:\\'],
+    ['\\( \\) \\[ \\] \\{ \\}', '括弧そのもの', '\\(\\d+\\) → (12)'],
+    ['\\* \\+ \\? \\^ \\$ \\|', '記号そのもの', '\\$\\d+ → $500'],
+    ['\\n / \\t', '改行 / タブ', 'a\\nb → 2行にまたがる a と b'],
+    ['\\uXXXX', 'Unicode コードポイント', '\\u3042 → あ'],
+  ]],
+  ['フラグ（練習場で指定）', [
+    ['g', 'すべてのマッチを探す（なしなら最初の1件）', '/a/g → banana の a ×3'],
+    ['i', '大文字・小文字を区別しない', '/png/i → PNG'],
+    ['m', '^ と $ が各行の先頭・末尾にマッチ', '/^\\d/m → 各行頭の数字'],
+  ]],
+];
+(function renderCheat() {
+  const root = $('cheat');
+  CHEAT.forEach(([title, rows]) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    let html = '<h2>' + esc(title) + '</h2><table class="cheat"><colgroup><col class="c1"><col class="c2"><col></colgroup>' +
+      '<thead><tr><th>記法</th><th>意味</th><th>例</th></tr></thead><tbody>';
+    rows.forEach(([syn, mean, ex]) => {
+      html += '<tr><td data-label="記法"><code>' + esc(syn) + '</code></td><td data-label="意味">' + esc(mean) +
+        '</td><td data-label="例"><code>' + esc(ex) + '</code></td></tr>';
+    });
+    card.innerHTML = html + '</tbody></table>';
+    root.appendChild(card);
+  });
+})();
+
+showMode(['play', 'drill', 'cheat'].includes(load('mode', 'play')) ? load('mode', 'play') : 'play');
+</script>
+</body>
+</html>
