@@ -114,6 +114,10 @@
   .result[hidden] { display: none; }
   .result.ok { background: var(--ok-weak); color: var(--ok); }
   .result.ng { background: var(--ng-weak); color: var(--ng); }
+  .fb-mark{width:84px;height:84px;display:block;margin:0 auto 8px;animation:fb-pop .25s ease-out}
+  .fb-batsu{width:64px;height:64px}
+  @keyframes fb-pop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  @media (prefers-reduced-motion: reduce){.fb-mark{animation:none}}
   .hintbox { margin-top: 10px; padding: 10px; border-radius: 10px; background: #fff8e1; border: 1px solid #f0d77b; }
   .hintbox[hidden] { display: none; }
   .hintbox p { margin: 4px 0; }
@@ -1006,6 +1010,22 @@ function judge(src, p) {
   return { pos, neg, ok: pos.every(Boolean) && neg.every((v) => !v) };
 }
 
+// 正誤フィードバックの図形マーク（正解＝花丸、不正解＝バツ）
+const FB_MARK = {
+  ok: '<svg class="fb-mark fb-hanamaru" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 C72 4 92 22 94 46 C96 71 78 93 53 95 C28 97 7 79 6 54 C5 29 26 8 50 6 Z" fill="none" stroke="#e03a1e" stroke-width="5" stroke-linecap="round"/><path d="M50 18 C66 17 81 30 82 47 C83 65 69 82 52 83 C35 84 19 70 18 53 C17 35 33 19 50 18 Z" fill="none" stroke="#e03a1e" stroke-width="4" stroke-linecap="round"/><path d="M38 38 C44 30 58 29 64 37 M34 55 C31 45 36 33 45 29 M66 55 C69 65 63 76 54 79 M45 68 C53 73 65 70 69 61" fill="none" stroke="#e03a1e" stroke-width="4" stroke-linecap="round"/></svg>',
+  ng: '<svg class="fb-mark fb-batsu" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 22 L78 78 M78 22 L22 78" stroke="#34548f" stroke-width="11" stroke-linecap="round" fill="none"/></svg>',
+};
+
+// 正誤確定時のフィードバック表示：先頭にマーク、その下にテキスト
+function showVerdict(ok, text) {
+  dr.result.hidden = false;
+  dr.result.className = 'result ' + (ok ? 'ok' : 'ng');
+  dr.result.innerHTML = FB_MARK[ok ? 'ok' : 'ng'];
+  const msg = document.createElement('div');
+  msg.textContent = text;
+  dr.result.appendChild(msg);
+}
+
 function check() {
   const p = PROBLEMS[current];
   const src = dr.input.value;
@@ -1046,21 +1066,19 @@ function check() {
   paint(dr.pos, r.pos, true);
   paint(dr.neg, r.neg, false);
 
-  dr.result.hidden = false;
   if (r.ok) {
     solved.add(p.id);
     save('solved', [...solved]);
     updateScore();
     dr.solvedTag.hidden = false;
-    dr.result.className = 'result ok';
-    dr.result.textContent = '正解！ すべての文字列で期待どおりに判定されました。';
+    let text = '正解！ すべての文字列で期待どおりに判定されました。';
     if (current < PROBLEMS.length - 1) { dr.next.classList.add('primary'); dr.next.textContent = '次の問題へ進む →'; }
-    else dr.result.textContent += ' これが最後の問題です。';
+    else text += ' これが最後の問題です。';
+    showVerdict(true, text);
     renderGrid();
   } else {
     const fails = r.pos.filter((v) => !v).length + r.neg.filter((v) => v).length;
-    dr.result.className = 'result ng';
-    dr.result.textContent = '不正解：' + fails + '件の文字列で失敗しています（✗ の行を確認してください）。';
+    showVerdict(false, '不正解：' + fails + '件の文字列で失敗しています（✗ の行を確認してください）。');
   }
 }
 

@@ -47,6 +47,7 @@ const check = (cond, msg) => { console.log((cond ? '  OK: ' : '  NG: ') + msg); 
   await page.fill('#dr-input', 'ねこ');
   await page.click('#dr-check');
   check(await page.locator('#dr-pos li.fail').count() === 3, '不正解時に失敗した文字列を表示');
+  check(await page.evaluate(() => { const r = document.getElementById('dr-result'); return r.firstElementChild && r.firstElementChild.matches('svg.fb-batsu') && r.querySelectorAll('.fb-mark').length === 1; }), '不正解時にバツをテキストより上に1つ表示');
   await page.fill('#dr-input', '[');
   await page.click('#dr-check');
   check(await page.isVisible('#dr-error'), '不正な正規表現でエラー表示');
@@ -61,6 +62,8 @@ const check = (cond, msg) => { console.log((cond ? '  OK: ' : '  NG: ') + msg); 
     await page.click('#dr-check');
     const cls = await page.getAttribute('#dr-result', 'class');
     if (!cls.includes('ok')) check(false, problems[i].id + ' が UI 上で正解にならない');
+    if (i === 0) check(await page.evaluate(() => { const r = document.getElementById('dr-result'); return r.firstElementChild && r.firstElementChild.matches('svg.fb-hanamaru') && r.querySelectorAll('.fb-mark').length === 1 && r.textContent.includes('正解！'); }), '正解時に花丸をテキストより上に1つ表示');
+    if (i === problems.length - 1) check(await page.evaluate(() => { const r = document.getElementById('dr-result'); return r.querySelector('svg.fb-hanamaru') && r.textContent.includes('最後の問題'); }), '最終問題でも花丸と「最後の問題」表示');
     if (i < problems.length - 1) await page.click('#dr-next');
   }
   check((await page.textContent('#score')) === '正解数 30/30', '模範解答を UI で入力して 30/30');
